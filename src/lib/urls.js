@@ -34,3 +34,19 @@ export function validateJobUrl(raw) {
   }
   return { ok: true, url };
 }
+
+export function isSameJobUrl(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") {
+    return false;
+  }
+  const a = left.trim();
+  const b = right.trim();
+  if (!a || !b) {
+    return false;
+  }
+  try {
+    return new URL(a).href === new URL(b).href;
+  } catch {
+    return false;
+  }
+}

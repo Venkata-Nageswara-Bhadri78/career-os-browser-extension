@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Chrome MV3 extension that captures job postings for Copilot extraction.",
+  "description": "Chrome MV3 extension that sends job postings to Copilot for automatic save.",
   "scripts": {
     "dev": "wxt --browser chrome",
     "build": "wxt build --browser chrome",

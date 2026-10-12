@@ -73,7 +73,7 @@ describe("error mapper", () => {
     ).toBe("error");
   });
 
-  it("treats 409 as already saved and 200 with requiresManualReview as success", () => {
+  it("treats 409 as already saved and does not call it a draft", () => {
     const saved = mapParseOutcome({
       parseKind: "automated",
       httpStatus: 409,
@@ -81,15 +81,113 @@ describe("error mapper", () => {
     });
     expect(saved.kind).toBe("already_saved");
     expect(saved.shouldClearSession).toBe(false);
+    expect(saved.persistedAs).toBeNull();
+    expect(saved.draftId).toBeNull();
+  });
 
+  it("reads a saved job only from persistedAs JOB", () => {
     const ok = mapParseOutcome({
+      parseKind: "automated",
+      httpStatus: 200,
+      success: true,
+      message: "Job created successfully.",
+      data: {
+        persistedAs: "JOB",
+        job: {
+          id: 9,
+          title: "Engineer",
+          company: "Acme",
+          sourceUrl: "https://example.com/jobs/123",
+          skills: ["Java", "Spring"],
+          resumeToJobScore: 80,
+        },
+        draft: null,
+        failureReason: null,
+      },
+    });
+    expect(ok.kind).toBe("job");
+    expect(ok.persistedAs).toBe("JOB");
+    expect(ok.jobId).toBe(9);
+    expect(ok.draftId).toBeNull();
+    expect(ok.record.skills).toBe("Java, Spring");
+    expect(ok.record.resumeToJobScore).toBe(80);
+    expect(ok.record).not.toHaveProperty("requiresManualReview");
+
+    const fromString = mapParseOutcome({
       parseKind: "manual",
       httpStatus: 200,
+      success: true,
+      message: "Job created successfully.",
+      data: {
+        persistedAs: "JOB",
+        job: { id: 3, title: "PM", company: "Acme", skills: "Java, Spring Boot", resumeToJobScore: 0 },
+      },
+    });
+    expect(fromString.kind).toBe("job");
+    expect(fromString.record.skills).toBe("Java, Spring Boot");
+    expect(fromString.record.resumeToJobScore).toBe(0);
+  });
+
+  it("reads a draft only from persistedAs DRAFT", () => {
+    const drafted = mapParseOutcome({
+      parseKind: "automated",
+      httpStatus: 200,
+      success: true,
+      message: "Job could not be saved. Stored as a draft.",
+      data: {
+        persistedAs: "DRAFT",
+        job: null,
+        draft: {
+          id: 4,
+          sourceUrl: "https://example.com/jobs/123",
+          title: null,
+          company: "Acme",
+          failureCategory: "VALIDATION",
+          failureReason: "title: Title cannot be blank.",
+        },
+        failureReason: "title: Title cannot be blank.",
+      },
+    });
+    expect(drafted.kind).toBe("draft");
+    expect(drafted.draftId).toBe(4);
+    expect(drafted.jobId).toBeNull();
+    expect(drafted.failureCategory).toBe("VALIDATION");
+    expect(drafted.failureReason).toBe("title: Title cannot be blank.");
+  });
+
+  it("does not treat a preview payload or a false success flag as a save", () => {
+    const preview = mapParseOutcome({
+      parseKind: "manual",
+      httpStatus: 200,
+      success: true,
       message: "Job information extracted successfully. Review and edit before saving.",
       data: { title: "PM", company: "", requiresManualReview: true, skills: ["Java"] },
     });
-    expect(ok.kind).toBe("success");
-    expect(ok.preview.requiresManualReview).toBe(true);
-    expect(ok.preview.skills).toEqual(["Java"]);
+    expect(preview.kind).toBe("error");
+    expect(preview.message).toBe(COPY.AMBIGUOUS);
+    expect(preview.jobId).toBeNull();
+    expect(preview.draftId).toBeNull();
+    expect(preview.record).toBeNull();
+
+    const rejected = mapParseOutcome({
+      parseKind: "automated",
+      httpStatus: 200,
+      success: false,
+      message: "The job could not be saved and the draft could not be stored.",
+      data: { persistedAs: "JOB", job: { id: 9, title: "Engineer" } },
+    });
+    expect(rejected.kind).toBe("error");
+    expect(rejected.jobId).toBeNull();
+    expect(rejected.message).toBe("The job could not be saved and the draft could not be stored.");
+
+    const missingJob = mapParseOutcome({
+      parseKind: "automated",
+      httpStatus: 200,
+      success: true,
+      message: "Job created successfully.",
+      data: { persistedAs: "JOB", job: null, draft: null },
+    });
+    expect(missingJob.kind).toBe("error");
+    expect(missingJob.message).toBe(COPY.AMBIGUOUS);
   });
 });
