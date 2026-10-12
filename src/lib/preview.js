@@ -8,29 +8,64 @@ function asString(value) {
   return String(value);
 }
 
-export function toPreview(data) {
-  if (!data || typeof data !== "object") {
+function asId(value) {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value;
+  }
+  return null;
+}
+
+function asScore(value) {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value;
+  }
+  return null;
+}
+
+function clip(value, max) {
+  const text = asString(value).trim();
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max - 1)}…`;
+}
+
+function skillsToString(value) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return "";
+}
+
+export function toRecord(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
-  const skills = Array.isArray(data.skills)
-    ? data.skills.filter((item) => typeof item === "string")
-    : [];
   return {
-    sourceUrl: asString(data.sourceUrl),
-    originalDescription: asString(data.originalDescription),
-    description: asString(data.description),
-    title: asString(data.title),
-    company: asString(data.company),
-    location: asString(data.location),
-    employmentType: asString(data.employmentType),
-    workMode: asString(data.workMode),
-    experience: asString(data.experience),
-    salary: asString(data.salary),
-    education: asString(data.education),
-    department: asString(data.department),
-    industry: asString(data.industry),
-    sourcePlatform: asString(data.sourcePlatform),
-    skills,
-    requiresManualReview: Boolean(data.requiresManualReview),
+    id: asId(data.id),
+    sourceUrl: asString(data.sourceUrl).trim(),
+    title: asString(data.title).trim(),
+    company: asString(data.company).trim(),
+    location: asString(data.location).trim(),
+    employmentType: asString(data.employmentType).trim(),
+    workMode: asString(data.workMode).trim(),
+    experience: asString(data.experience).trim(),
+    salary: asString(data.salary).trim(),
+    education: asString(data.education).trim(),
+    department: asString(data.department).trim(),
+    industry: asString(data.industry).trim(),
+    sourcePlatform: asString(data.sourcePlatform).trim(),
+    skills: clip(skillsToString(data.skills), 300),
+    description: clip(data.description, 400),
+    resumeToJobScore: asScore(data.resumeToJobScore),
+    failureCategory: typeof data.failureCategory === "string" ? data.failureCategory.trim() : "",
+    failureReason: clip(data.failureReason, 1000),
   };
 }

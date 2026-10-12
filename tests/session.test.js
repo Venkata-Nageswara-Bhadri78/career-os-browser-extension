@@ -36,4 +36,28 @@ describe("session", () => {
     expect(safe.lastTabUrl).toBe("https://jobs.example.com/1");
     expect(safe).not.toHaveProperty("accessToken");
   });
+
+  it("keeps attempt history without treating a legacy preview as a saved job", () => {
+    const safe = toSafeState({
+      accessToken: "super-secret",
+      expiresAt: Date.now() + 60_000,
+      lastResult: { kind: "success", message: "Review and edit before saving.", preview: { title: "PM" } },
+      attempts: [
+        {
+          id: "a1",
+          status: "job",
+          sourceUrl: "https://jobs.example.com/1",
+          title: "Engineer",
+          accessToken: "super-secret",
+        },
+      ],
+    });
+    expect(safe.lastResult.kind).toBe("error");
+    expect(safe.lastResult.persistedAs).toBeNull();
+    expect(safe.lastResult.message).toMatch(/not saved/);
+    expect(safe.attempts).toHaveLength(1);
+    expect(safe.attempts[0].title).toBe("Engineer");
+    expect(safe.attempts[0]).not.toHaveProperty("accessToken");
+    expect(JSON.stringify(safe)).not.toContain("super-secret");
+  });
 });

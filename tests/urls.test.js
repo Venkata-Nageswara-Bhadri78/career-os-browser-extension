@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_URL_LENGTH, validateJobUrl } from "../src/lib/urls.js";
+import { isSameJobUrl, MAX_URL_LENGTH, validateJobUrl } from "../src/lib/urls.js";
 
 describe("validateJobUrl", () => {
   it("accepts http and https URLs", () => {
@@ -25,6 +25,13 @@ describe("validateJobUrl", () => {
     expect(url.length).toBe(MAX_URL_LENGTH + 1);
     expect(validateJobUrl(url).ok).toBe(false);
     expect(validateJobUrl(url).message).toMatch(/2000/);
+  });
+
+  it("matches the same absolute job URL and rejects a different page", () => {
+    expect(isSameJobUrl("https://jobs.example.com/1", " https://jobs.example.com/1 ")).toBe(true);
+    expect(isSameJobUrl("https://jobs.example.com/1", "https://jobs.example.com/2")).toBe(false);
+    expect(isSameJobUrl("https://www.linkedin.com/jobs/view/1", "https://www.naukri.com/job/1")).toBe(false);
+    expect(isSameJobUrl("", "https://jobs.example.com/1")).toBe(false);
   });
 
   it("rejects blank", () => {

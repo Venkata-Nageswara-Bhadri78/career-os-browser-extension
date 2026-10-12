@@ -26,7 +26,7 @@ export default defineConfig({
     return {
       name: EXTENSION_NAME,
       description:
-        "Capture a job posting and send it to Copilot for extraction. Review and save on the website.",
+        "Send a job page, a job link, or pasted text to Copilot. Jobs save automatically; drafts are finished on the website.",
       version: "1.0.0",
       minimum_chrome_version: "116",
       key: MANIFEST_KEY,
